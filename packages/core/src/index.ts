@@ -30,6 +30,6 @@ export {
 	wrapTextWithPrefix,
 } from './utils/index.js';
 export type { ClackSettings } from './utils/settings.js';
-export { settings, updateSettings } from './utils/settings.js';
+export { isAccessible, settings, updateSettings } from './utils/settings.js';
 export type { Validate } from './utils/validation.js';
 export { runValidation } from './utils/validation.js';
