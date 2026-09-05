@@ -6,6 +6,8 @@ import { isCancel, settings } from '../../src/utils/index.js';
 import { MockReadable } from '../mock-readable.js';
 import { MockWritable } from '../mock-writable.js';
 
+const waitForTick = () => new Promise((resolve) => setTimeout(resolve, 0));
+
 describe('Prompt', () => {
 	let input: MockReadable;
 	let output: MockWritable;
@@ -395,5 +397,80 @@ describe('Prompt', () => {
 			expect(instance.state).to.equal('error');
 			expect(instance.error).to.equal('must be "valid" (was "invalid")');
 		});
+	});
+
+	test('validates value with async validation', async () => {
+		const instance = new Prompt<string>({
+			input,
+			output,
+			render: () => 'foo',
+			validate: async (value) => {
+				await waitForTick();
+				return value === 'valid' ? undefined : 'Invalid value';
+			},
+		});
+		instance.prompt();
+
+		instance.value = 'invalid';
+		input.emit('keypress', '', { name: 'return' });
+
+		expect(instance.state).to.equal('validating');
+		await waitForTick(); // Wait for the validation to complete
+		expect(instance.state).to.equal('error');
+		expect(instance.error).to.equal('Invalid value');
+	});
+
+	test('accepts valid value with async validation', async () => {
+		const instance = new Prompt<string>({
+			input,
+			output,
+			render: () => 'foo',
+			validate: async (value) => {
+				await waitForTick();
+				return value === 'valid' ? undefined : 'Invalid value';
+			},
+		});
+		instance.prompt();
+
+		instance.value = 'valid';
+		input.emit('keypress', '', { name: 'return' });
+
+		expect(instance.state).to.equal('validating');
+		await waitForTick(); // Wait for the validation to complete
+		expect(instance.state).to.equal('submit');
+		expect(instance.error).to.equal('');
+	});
+
+	test('ignores keypresses while async validation is pending', async () => {
+		const eventSpy = vi.fn();
+		let resolveValidation: (problem: string | undefined) => void;
+		const validation = new Promise<string | undefined>((resolve) => {
+			resolveValidation = resolve;
+		});
+		const instance = new Prompt<string>({
+			input,
+			output,
+			render: () => 'foo',
+			validate: () => validation,
+		});
+		const resultPromise = instance.prompt();
+
+		instance.value = 'valid';
+		input.emit('keypress', '', { name: 'return' });
+
+		expect(instance.state).to.equal('validating');
+
+		instance.on('key', eventSpy);
+		input.emit('keypress', 'z', { name: 'z' });
+		input.emit('keypress', '\x03', { name: 'c' });
+
+		expect(eventSpy).not.toHaveBeenCalled();
+		expect(instance.state).to.equal('validating');
+
+		resolveValidation!(undefined);
+		await resultPromise;
+
+		expect(instance.state).to.equal('submit');
+		expect(instance.error).to.equal('');
 	});
 });

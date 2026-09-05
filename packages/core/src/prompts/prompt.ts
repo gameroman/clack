@@ -224,7 +224,11 @@ export default class Prompt<TValue> {
 		this._setUserInput('');
 	}
 
-	private onKeypress(char: string | undefined, key: Key) {
+	private async onKeypress(char: string | undefined, key: Key) {
+		if (this.state === 'validating') {
+			return;
+		}
+
 		if (this._track && key.name !== 'return') {
 			if (key.name && this._isActionKey(char, key)) {
 				this.rl?.write(null, { ctrl: true, name: 'h' });
@@ -253,7 +257,15 @@ export default class Prompt<TValue> {
 
 		if (key?.name === 'return' && this._shouldSubmit(char, key)) {
 			if (this.opts.validate) {
-				const problem = runValidation(this.opts.validate, this.value);
+				const problemResult = runValidation(this.opts.validate, this.value);
+				let problem: string | Error | undefined;
+				if (problemResult instanceof Promise) {
+					this.state = 'validating';
+					this.render();
+					problem = await problemResult;
+				} else {
+					problem = problemResult;
+				}
 				if (problem) {
 					this.error = problem instanceof Error ? problem.message : problem;
 					this.state = 'error';
