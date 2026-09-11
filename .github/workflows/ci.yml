@@ -15,7 +15,6 @@ concurrency:
 
 jobs:
   scripts:
-    if: github.repository_owner == 'bombshell-dev'
     uses: bombshell-dev/automation/.github/workflows/run.yml@3a8b4a38fe464b0b51d14962ae416a169517fba9  # main as of 2026-05-12
     with:
       commands: >
