@@ -1,5 +1,5 @@
 import { updateSettings } from '@clack/core';
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, expectTypeOf, test, vi } from 'vitest';
 import * as prompts from '../src/index.js';
 import { MockReadable, MockWritable } from './test-utils.js';
 
@@ -55,6 +55,9 @@ describe.each(['true', 'false'])('text (isCI = %s)', (isCI) => {
 
 		expect(output.buffer).toMatchSnapshot();
 		expect(value).toBe('');
+		if (!prompts.isCancel(value)) {
+			expectTypeOf(value).toEqualTypeOf<string>();
+		}
 	});
 
 	test('can cancel', async () => {
